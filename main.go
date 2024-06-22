@@ -1,18 +1,17 @@
 package main
 
 import (
+	"fmt"
 	"os"
 	"os/signal"
-	"syscall"
-	"fmt"
 	"strconv"
+	"syscall"
 
 	twitch "github.com/gempir/go-twitch-irc/v4"
 )
 
-
-func main () {
-	fmt.Print("\033[?25l") // Hide cursor
+func main() {
+	fmt.Print("\033[?25l")     // Hide cursor
 	fmt.Print("\033[2J\033[H") // Clear screen
 
 	var channel = "stevemacawesome"
@@ -22,7 +21,7 @@ func main () {
 
 	client := twitch.NewAnonymousClient()
 	client.Join(channel)
-	
+
 	client.OnConnect(func() {
 		fmt.Println("Connected to", channel)
 	})
@@ -39,20 +38,19 @@ func main () {
 			b, _ = strconv.ParseInt(col[5:7], 16, 64)
 		}
 
-		colorCode := fmt.Sprintf("\033[0m\033[38;2;%d;%d;%dm", r,g,b);
+		colorCode := fmt.Sprintf("\033[0m\033[38;2;%d;%d;%dm", r, g, b)
 
 		fmt.Printf("%s%s\033[0m: %s\n", colorCode, usr, msg)
 	})
 
 	// Restore cursor on exit
 	c := make(chan os.Signal, 1)
-    signal.Notify(c, os.Interrupt, syscall.SIGTERM)
-    go func() {
-        <-c
+	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+	go func() {
+		<-c
 		fmt.Print("\033[?25h") // Show cursor
-        os.Exit(1)
-    }()
-
+		os.Exit(1)
+	}()
 
 	err := client.Connect()
 	if err != nil {
