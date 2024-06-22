@@ -11,9 +11,11 @@ import (
 )
 
 func main() {
-	fmt.Print("\033[?25l")     // Hide cursor
-	fmt.Print("\033[2J\033[H") // Clear screen
+	// Hide cursor and clear screen
+	fmt.Print("\033[?25l")
+	fmt.Print("\033[2J\033[H")
 
+	// Default to my twitch channel
 	var channel = "stevemacawesome"
 	if len(os.Args) > 1 {
 		channel = os.Args[1]
