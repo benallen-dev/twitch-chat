@@ -7,8 +7,39 @@ import (
 	"strconv"
 	"syscall"
 
+	"golang.org/x/term"
+
 	twitch "github.com/gempir/go-twitch-irc/v4"
+	"github.com/muesli/reflow/wordwrap"
 )
+
+func displayName(User twitch.User) string {
+	name := User.DisplayName
+	col := User.Color
+
+	r, g, b := int64(185), int64(163), int64(227)
+	if col != "" {
+		r, _ = strconv.ParseInt(col[1:3], 16, 64)
+		g, _ = strconv.ParseInt(col[3:5], 16, 64)
+		b, _ = strconv.ParseInt(col[5:7], 16, 64)
+	}
+
+	return fmt.Sprintf("\033[38;2;%d;%d;%dm%s\033[0m", r, g, b, name)
+}
+
+func getTermWidth() int {
+
+	if !term.IsTerminal(0) {
+		return -1
+    }
+
+	width, _, err := term.GetSize(0)
+    if err != nil {
+        return -1
+    }
+
+	return width
+}
 
 func main() {
 	// Hide cursor and clear screen
@@ -23,27 +54,15 @@ func main() {
 	client := twitch.NewAnonymousClient()
 	client.Join(channel)
 
-	client.OnConnect(func() {
-		fmt.Println("Connected to", channel)
+	client.OnSelfJoinMessage(func(message twitch.UserJoinMessage) {
+		fmt.Printf("Joined %s\n", message.Channel)
 	})
 
-	// Private message is a misnomer, it's actually a chat message
+	// Private message is a misnomer, it's actually a chat message but it's how Twitch IRC works
 	client.OnPrivateMessage(func(message twitch.PrivateMessage) {
-		usr := message.User.DisplayName
-		msg := message.Message
-		col := message.User.Color
-		
-		// Same default color as Twitch
-		r, g, b := int64(49), int64(154), int64(36) 
-		if col != "" {
-			r, _ = strconv.ParseInt(col[1:3], 16, 64)
-			g, _ = strconv.ParseInt(col[3:5], 16, 64)
-			b, _ = strconv.ParseInt(col[5:7], 16, 64)
-		}
-
-		ansiCol := fmt.Sprintf("\033[38;2;%d;%d;%dm", r, g, b)
-
-		fmt.Printf("%s%s\033[0m: %s\n", ansiCol, usr, msg)
+		s := displayName(message.User) + ": " + message.Message
+		s = wordwrap.String(s, getTermWidth())
+		fmt.Println(s)
 	})
 
 	// Restore cursor on exit
@@ -51,12 +70,15 @@ func main() {
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 	go func() {
 		<-c
+		client.Disconnect()
 		fmt.Print("\033[?25h")
 		os.Exit(1)
 	}()
 
+	fmt.Println("Attempting to connect...")
 	err := client.Connect()
 	if err != nil {
 		panic(err)
 	}
+
 }
