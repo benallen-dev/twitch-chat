@@ -1,5 +1,9 @@
 package main
 
+/*
+https://twitchapps.com/tmi/
+*/
+
 import (
 	"fmt"
 	"os"
@@ -51,11 +55,15 @@ func main() {
 		channel = os.Args[1]
 	}
 
-	client := twitch.NewAnonymousClient()
+	user := os.Getenv("TWITCH_USER")
+	oauth := os.Getenv("TWITCH_OAUTH")
+
+	//client := twitch.NewAnonymousClient()
+	client := twitch.NewClient(user, oauth)
 	client.Join(channel)
 
 	client.OnSelfJoinMessage(func(message twitch.UserJoinMessage) {
-		fmt.Printf("Joined %s\n", message.Channel)
+		fmt.Printf("%s: Joined %s\n", message.User, message.Channel)
 	})
 
 	// Private message is a misnomer, it's actually a chat message but it's how Twitch IRC works
@@ -80,5 +88,8 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+
+	// The application will not reach here until it is terminated
+	// because client.Connect() is a blocking call
 
 }
